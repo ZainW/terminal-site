@@ -1,0 +1,232 @@
+---
+export interface Props {
+	onComplete: () => void;
+}
+---
+
+<div id="boot-sequence" class="boot-screen">
+	<div class="boot-content"></div>
+	<div class="skip-instruction">Press ENTER to skip boot sequence</div>
+</div>
+
+<style>
+	.boot-screen {
+		width: 100%;
+		height: 100%;
+		background: var(--bg-primary);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		position: relative;
+	}
+
+	.boot-screen::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: linear-gradient(
+			transparent 50%,
+			rgba(122, 162, 247, 0.02) 50%
+		);
+		background-size: 100% 2px;
+		pointer-events: none;
+		animation: scanlines 0.08s linear infinite;
+	}
+
+	@keyframes scanlines {
+		0% { transform: translateY(0); }
+		100% { transform: translateY(2px); }
+	}
+
+	.boot-content {
+		font-size: 13px;
+		line-height: 1.6;
+		text-align: left;
+		white-space: pre-wrap;
+		max-width: 85%;
+		color: var(--fg-secondary);
+	}
+
+	.skip-instruction {
+		position: absolute;
+		top: 24px;
+		right: 24px;
+		font-size: 11px;
+		color: var(--fg-muted);
+		background: var(--bg-tertiary);
+		padding: 10px 16px;
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		backdrop-filter: blur(10px);
+		animation: pulse 2s infinite;
+		box-shadow: 0 4px 12px var(--shadow);
+	}
+
+	@keyframes pulse {
+		0%, 100% { opacity: 0.8; }
+		50% { opacity: 1; }
+	}
+</style>
+
+<script>
+	import type { BootMessage } from '../types/terminal';
+
+	class BootSequence {
+		private bootContent: HTMLElement;
+		private bootScreen: HTMLElement;
+		private bootSkipped = false;
+		private bootComplete = false;
+
+		constructor() {
+			this.bootContent = document.querySelector('.boot-content')!;
+			this.bootScreen = document.getElementById('boot-sequence')!;
+			this.init();
+		}
+
+		async init(): Promise<void> {
+			try {
+				await this.runBootSequence();
+			} catch (error) {
+				console.error('Boot sequence failed:', error);
+				this.skipToEnd();
+			}
+		}
+
+		async runBootSequence(): Promise<void> {
+			const skipHandler = (e: KeyboardEvent) => {
+				if (e.key === 'Enter' && !this.bootComplete) {
+					this.bootSkipped = true;
+					document.removeEventListener('keydown', skipHandler);
+					this.skipToEnd();
+				}
+			};
+			document.addEventListener('keydown', skipHandler);
+
+			const bootMessages: BootMessage[] = [
+				{ text: 'BIOS v2.4.1 - Zain\'s Portfolio System' },
+				{ text: 'Copyright (C) 2024 Creative Developer Inc.' },
+				{ text: '' },
+				{ text: 'Memory Test: 32GB OK' },
+				{ text: 'CPU: Intel Core i7-Creative @ 3.8GHz' },
+				{ text: 'GPU: NVIDIA GeForce RTX-Imagination' },
+				{ text: '' },
+				{ text: 'Loading kernel modules...', delay: 200 },
+				{ text: '[✓] personality.ko loaded' },
+				{ text: '[✓] skills.ko loaded' },
+				{ text: '[✓] experience.ko loaded' },
+				{ text: '[✓] creativity.ko loaded' },
+				{ text: '[✓] problem_solving.ko loaded' },
+				{ text: '' },
+				{ text: 'Starting services...', delay: 200 },
+				{ text: '[✓] Web Development Service' },
+				{ text: '[✓] Problem Solving Daemon' },
+				{ text: '[✓] Coffee Brewing Service' },
+				{ text: '[✓] Late Night Coding Mode' },
+				{ text: '[✓] Debugging Wizard' },
+				{ text: '' },
+				{ text: 'Initializing portfolio interface...' },
+				{ text: 'Loading user data... ████████████ 100%' },
+				{ text: 'Mounting projects filesystem... ████████████ 100%' },
+				{ text: 'Starting interactive shell... ████████████ 100%' },
+				{ text: '' },
+				{ text: 'System ready. Press ENTER to continue...' }
+			];
+
+			for (const message of bootMessages) {
+				if (this.bootSkipped) break;
+				
+				await this.typeText(message.text + '\n', 50);
+				if (message.delay) {
+					await this.sleep(message.delay);
+				}
+			}
+
+			this.bootComplete = true;
+			
+			if (!this.bootSkipped) {
+				await this.sleep(1000);
+			}
+			
+			const continueHandler = (e: KeyboardEvent) => {
+				if (e.key === 'Enter') {
+					document.removeEventListener('keydown', continueHandler);
+					this.transitionToTerminal();
+				}
+			};
+			document.addEventListener('keydown', continueHandler);
+		}
+
+		async skipToEnd(): Promise<void> {
+			this.bootContent.textContent = '';
+			await this.typeText('Boot sequence skipped...\n\nSystem ready. Press ENTER to continue...', 10);
+		}
+
+		async transitionToTerminal(): Promise<void> {
+			this.bootScreen.style.opacity = '0';
+			this.bootScreen.style.transition = 'opacity 1s ease-out';
+			
+			setTimeout(() => {
+				this.bootScreen.style.display = 'none';
+				const event = new CustomEvent('bootComplete');
+				document.dispatchEvent(event);
+			}, 1000);
+		}
+
+		private async typeText(text: string, speed = 15): Promise<void> {
+			const tokens = this.tokenizeText(text);
+			for (const token of tokens) {
+				if (this.bootSkipped) break;
+				this.bootContent.textContent += token;
+				await this.sleep(speed);
+			}
+		}
+
+		private tokenizeText(text: string): string[] {
+			const tokens: string[] = [];
+			let currentToken = '';
+			
+			for (let i = 0; i < text.length; i++) {
+				const char = text[i];
+				
+				if (char === ' ' || char === '\n' || char === '\t') {
+					if (currentToken) {
+						tokens.push(currentToken);
+						currentToken = '';
+					}
+					tokens.push(char);
+				} else if (/[.,!?;:()[\]{}'"<>]/.test(char)) {
+					if (currentToken) {
+						tokens.push(currentToken);
+						currentToken = '';
+					}
+					tokens.push(char);
+				} else if (char === '█' || char === '░') {
+					if (currentToken) {
+						tokens.push(currentToken);
+						currentToken = '';
+					}
+					tokens.push(char);
+				} else {
+					currentToken += char;
+				}
+			}
+			
+			if (currentToken) {
+				tokens.push(currentToken);
+			}
+			
+			return tokens;
+		}
+
+		private sleep(ms: number): Promise<void> {
+			return new Promise(resolve => setTimeout(resolve, ms));
+		}
+	}
+
+	document.addEventListener('DOMContentLoaded', () => {
+		new BootSequence();
+	});
+</script>

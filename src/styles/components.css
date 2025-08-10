@@ -1,0 +1,51 @@
+/* Skill bars */
+.skill-bar {
+	display: flex;
+	align-items: center;
+	margin: 6px 0;
+}
+
+.skill-name {
+	width: 140px;
+	display: inline-block;
+	color: var(--fg-secondary);
+	font-size: 12px;
+}
+
+.skill-progress {
+	flex: 1;
+	background: var(--bg-tertiary);
+	height: 8px;
+	margin: 0 12px;
+	position: relative;
+	border-radius: 4px;
+	overflow: hidden;
+}
+
+.skill-fill {
+	height: 100%;
+	background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+	transition: width 2s ease-in-out;
+	border-radius: 4px;
+}
+
+/* Progress bars */
+.progress-bar {
+	background: var(--bg-tertiary);
+	border-radius: 4px;
+	overflow: hidden;
+	height: 6px;
+	margin: 4px 0;
+}
+
+.progress-fill {
+	background: linear-gradient(90deg, var(--success), var(--accent-cyan));
+	height: 100%;
+	transition: width 0.3s ease;
+}
+
+/* Command output styling */
+.command-output {
+	margin: 12px 0;
+	color: var(--fg-primary);
+}

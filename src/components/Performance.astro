@@ -1,0 +1,155 @@
+---
+// Performance optimization component
+---
+
+<!-- Critical Resource Hints -->
+<link rel="preload" href="/fonts/JetBrainsMono-Regular.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="/fonts/JetBrainsMono-Bold.woff2" as="font" type="font/woff2" crossorigin />
+
+<!-- Preload critical CSS -->
+<link rel="preload" href="/src/styles/variables.css" as="style" />
+<link rel="preload" href="/src/styles/base.css" as="style" />
+
+<!-- Early hints for external resources -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+<!-- Resource hints for better loading -->
+<link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+<link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+
+<script>
+	// Critical performance optimizations
+	
+	// Reduce layout shift by setting font-display
+	if ('fonts' in document) {
+		const font = new FontFace('JetBrains Mono', 'url(/fonts/JetBrainsMono-Regular.woff2)', {
+			display: 'swap'
+		});
+		document.fonts.add(font);
+	}
+
+	// Optimize animations for reduced motion preference
+	if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+		document.documentElement.style.setProperty('--animation-duration', '0.01ms');
+		document.documentElement.style.setProperty('--transition-duration', '0.01ms');
+	}
+
+	// Performance observer for Core Web Vitals
+	if ('PerformanceObserver' in window) {
+		// Largest Contentful Paint
+		const lcpObserver = new PerformanceObserver((list) => {
+			const entries = list.getEntries();
+			const lastEntry = entries[entries.length - 1];
+			console.log('LCP:', lastEntry.startTime);
+		});
+		lcpObserver.observe({ entryTypes: ['largest-contentful-paint'] });
+
+		// First Input Delay
+		const fidObserver = new PerformanceObserver((list) => {
+			const entries = list.getEntries();
+			entries.forEach((entry) => {
+				console.log('FID:', entry.processingStart - entry.startTime);
+			});
+		});
+		fidObserver.observe({ entryTypes: ['first-input'] });
+
+		// Cumulative Layout Shift
+		const clsObserver = new PerformanceObserver((list) => {
+			let clsValue = 0;
+			const entries = list.getEntries();
+			entries.forEach((entry) => {
+				if (!entry.hadRecentInput) {
+					clsValue += entry.value;
+				}
+			});
+			console.log('CLS:', clsValue);
+		});
+		clsObserver.observe({ entryTypes: ['layout-shift'] });
+	}
+
+	// Optimize for battery and CPU
+	if ('getBattery' in navigator) {
+		navigator.getBattery().then((battery) => {
+			if (battery.level < 0.2 || !battery.charging) {
+				// Reduce animations and effects for low battery
+				document.documentElement.classList.add('low-power-mode');
+			}
+		});
+	}
+
+	// Service Worker registration for caching (optional)
+	if ('serviceWorker' in navigator) {
+		window.addEventListener('load', () => {
+			navigator.serviceWorker.register('/sw.js')
+				.then((registration) => {
+					console.log('SW registered: ', registration);
+				})
+				.catch((registrationError) => {
+					console.log('SW registration failed: ', registrationError);
+				});
+		});
+	}
+</script>
+
+<style>
+	/* Performance optimizations */
+	
+	/* Reduce motion for accessibility and performance */
+	@media (prefers-reduced-motion: reduce) {
+		*,
+		*::before,
+		*::after {
+			animation-duration: 0.01ms !important;
+			animation-iteration-count: 1 !important;
+			transition-duration: 0.01ms !important;
+			scroll-behavior: auto !important;
+		}
+	}
+
+	/* Low power mode optimizations */
+	.low-power-mode * {
+		animation: none !important;
+		transition: none !important;
+	}
+
+	.low-power-mode .boot-screen::before {
+		display: none;
+	}
+
+	/* Font loading optimization */
+	@font-face {
+		font-family: 'JetBrains Mono';
+		src: url('/fonts/JetBrainsMono-Regular.woff2') format('woff2');
+		font-weight: 400;
+		font-style: normal;
+		font-display: swap;
+	}
+
+	@font-face {
+		font-family: 'JetBrains Mono';
+		src: url('/fonts/JetBrainsMono-Bold.woff2') format('woff2');
+		font-weight: 700;
+		font-style: normal;
+		font-display: swap;
+	}
+
+	/* Critical CSS inlining prevention of FOUC */
+	body {
+		font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+	}
+
+	/* Optimize rendering */
+	* {
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
+	}
+
+	/* GPU acceleration for animations */
+	.boot-screen::before,
+	.cursor,
+	.terminal-screen {
+		will-change: transform, opacity;
+		transform: translateZ(0);
+	}
+</style>

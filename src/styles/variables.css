@@ -1,0 +1,17 @@
+:root {
+	/* Tokyo Night Color Palette */
+	--bg-primary: #1a1b26;
+	--bg-secondary: #16161e;
+	--bg-tertiary: #24283b;
+	--fg-primary: #c0caf5;
+	--fg-secondary: #a9b1d6;
+	--fg-muted: #565f89;
+	--accent-blue: #7aa2f7;
+	--accent-purple: #bb9af7;
+	--accent-cyan: #7dcfff;
+	--success: #9ece6a;
+	--warning: #e0af68;
+	--error: #f7768e;
+	--border: #414868;
+	--shadow: rgba(26, 27, 38, 0.8);
+}

@@ -1,0 +1,541 @@
+---
+export interface Props {
+	initiallyHidden?: boolean;
+}
+
+const { initiallyHidden = true } = Astro.props;
+---
+
+<div id="interactive-terminal" class="terminal-screen" style={initiallyHidden ? "display: none;" : ""}>
+	<div class="terminal-header">
+		<div class="terminal-title">Zain's Portfolio Terminal</div>
+		<div class="terminal-controls">
+			<span class="control minimize"></span>
+			<span class="control maximize"></span>
+			<span class="control close"></span>
+		</div>
+	</div>
+	<div class="terminal-body">
+		<div id="terminal-output"></div>
+		<div class="input-line">
+			<span class="prompt">zain@portfolio:~$ </span>
+			<input type="text" id="terminal-input" autocomplete="off" spellcheck="false">
+			<span class="cursor">_</span>
+		</div>
+	</div>
+</div>
+
+<style>
+	.terminal-screen {
+		width: 95%;
+		height: 90%;
+		max-width: 1200px;
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		background: var(--bg-secondary);
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		box-shadow: 
+			0 20px 40px var(--shadow),
+			0 0 0 1px rgba(122, 162, 247, 0.1),
+			inset 0 1px 0 rgba(192, 202, 245, 0.1);
+		backdrop-filter: blur(20px);
+	}
+
+	.terminal-header {
+		background: var(--bg-tertiary);
+		padding: 12px 20px;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		border-bottom: 1px solid var(--border);
+		border-radius: 12px 12px 0 0;
+	}
+
+	.terminal-title {
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--fg-primary);
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.terminal-title::before {
+		content: '●';
+		color: var(--accent-blue);
+		font-size: 8px;
+	}
+
+	.terminal-controls {
+		display: flex;
+		gap: 8px;
+	}
+
+	.control {
+		width: 12px;
+		height: 12px;
+		border-radius: 50%;
+		border: none;
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.control:hover {
+		transform: scale(1.1);
+	}
+
+	.minimize { background: var(--warning); }
+	.maximize { background: var(--success); }
+	.close { background: var(--error); }
+
+	.terminal-body {
+		padding: 20px 24px;
+		height: calc(100% - 49px);
+		overflow-y: auto;
+		position: relative;
+		background: var(--bg-primary);
+	}
+
+	.terminal-body::-webkit-scrollbar {
+		width: 8px;
+	}
+
+	.terminal-body::-webkit-scrollbar-track {
+		background: var(--bg-secondary);
+		border-radius: 4px;
+	}
+
+	.terminal-body::-webkit-scrollbar-thumb {
+		background: var(--border);
+		border-radius: 4px;
+		transition: background 0.2s ease;
+	}
+
+	.terminal-body::-webkit-scrollbar-thumb:hover {
+		background: var(--accent-blue);
+	}
+
+	.terminal-body::-webkit-scrollbar-corner {
+		background: var(--bg-secondary);
+	}
+
+	.terminal-body {
+		scrollbar-width: thin;
+		scrollbar-color: var(--border) var(--bg-secondary);
+	}
+
+	#terminal-output {
+		margin-bottom: 20px;
+		white-space: pre-wrap;
+		font-size: 13px;
+		line-height: 1.6;
+		color: var(--fg-primary);
+	}
+
+	.input-line {
+		display: flex;
+		align-items: center;
+		position: sticky;
+		bottom: 0;
+		background: var(--bg-primary);
+		padding: 8px 0;
+		border-top: 1px solid var(--border);
+		margin-top: 12px;
+	}
+
+	.prompt {
+		color: var(--accent-blue);
+		margin-right: 12px;
+		font-weight: 600;
+		font-size: 13px;
+	}
+
+	#terminal-input {
+		background: transparent;
+		border: none;
+		color: var(--fg-primary);
+		font-family: inherit;
+		font-size: 13px;
+		outline: none;
+		flex: 1;
+		padding: 4px 0;
+	}
+
+	#terminal-input::placeholder {
+		color: var(--fg-muted);
+	}
+
+	.cursor {
+		animation: blink 1.2s infinite;
+		margin-left: 4px;
+		color: var(--accent-cyan);
+	}
+
+	@keyframes blink {
+		0%, 50% { opacity: 1; }
+		51%, 100% { opacity: 0; }
+	}
+
+	.error {
+		color: var(--error);
+	}
+
+	.success {
+		color: var(--success);
+	}
+
+	.info {
+		color: var(--accent-blue);
+	}
+
+	.ascii-art {
+		color: var(--accent-cyan);
+		font-size: 11px;
+		line-height: 1.3;
+	}
+</style>
+
+<script>
+	import { TerminalCommands } from '../utils/commands';
+	import type { TerminalState, TabCompletionResult } from '../types/terminal';
+
+	class TerminalInterface {
+		private output: HTMLElement;
+		private input: HTMLInputElement;
+		private terminalScreen: HTMLElement;
+		private commands: TerminalCommands;
+		private state: TerminalState;
+
+		constructor() {
+			this.output = document.getElementById('terminal-output')!;
+			this.input = document.getElementById('terminal-input') as HTMLInputElement;
+			this.terminalScreen = document.getElementById('interactive-terminal')!;
+			this.commands = new TerminalCommands();
+			
+			this.state = {
+				commandHistory: [],
+				historyIndex: -1,
+				currentDirectory: '~',
+				bootComplete: false,
+				bootSkipped: false
+			};
+
+			this.init();
+		}
+
+		private init(): void {
+			try {
+				this.setupEventListeners();
+				document.addEventListener('bootComplete', () => {
+					this.showTerminal();
+				});
+			} catch (error) {
+				console.error('Failed to initialize terminal:', error);
+				this.showError('Terminal initialization failed. Please refresh the page.');
+			}
+		}
+
+		private setupEventListeners(): void {
+			this.input.addEventListener('keydown', (e) => {
+				try {
+					this.handleKeyDown(e);
+				} catch (error) {
+					console.error('Error handling keydown:', error);
+					this.showError('An error occurred while processing your input.');
+				}
+			});
+		}
+
+		private handleKeyDown(e: KeyboardEvent): void {
+			switch (e.key) {
+				case 'Enter':
+					this.executeCommand();
+					break;
+				case 'ArrowUp':
+					e.preventDefault();
+					this.navigateHistory(-1);
+					break;
+				case 'ArrowDown':
+					e.preventDefault();
+					this.navigateHistory(1);
+					break;
+				case 'Tab':
+					e.preventDefault();
+					this.handleTabCompletion();
+					break;
+			}
+		}
+
+		private async showTerminal(): Promise<void> {
+			try {
+				this.terminalScreen.style.display = 'block';
+				this.terminalScreen.style.opacity = '0';
+				this.terminalScreen.style.transition = 'opacity 1s ease-in';
+				
+				setTimeout(() => {
+					this.terminalScreen.style.opacity = '1';
+					this.showWelcomeMessage();
+					this.input.focus();
+				}, 100);
+			} catch (error) {
+				console.error('Error showing terminal:', error);
+				this.showError('Failed to display terminal interface.');
+			}
+		}
+
+		private async showWelcomeMessage(): Promise<void> {
+			const welcome = `<strong>Zain's Portfolio Terminal v2.0.0</strong> <span class="ascii-art">Tokyo Night Edition</span>
+<span class="info">Last login:</span> ${new Date().toLocaleString()} from <em>creative-mind.local</em>
+
+<span class="success">Welcome to my interactive portfolio!</span>
+Type <span class="info">'help'</span> to see available commands or just start exploring.
+
+<span class="ascii-art">┌─────────────────────────────────────────────────────────────┐
+│ 💡 Tip: This terminal supports full command history and     │
+│    modern shortcuts. Try exploring with different commands! │
+└─────────────────────────────────────────────────────────────┘</span>
+
+`;
+			await this.typeToOutput(welcome, 8);
+		}
+
+		private async executeCommand(): Promise<void> {
+			const command = this.input.value.trim();
+			if (!command) return;
+
+			try {
+				this.state.commandHistory.push(command);
+				this.state.historyIndex = this.state.commandHistory.length;
+				this.input.value = '';
+
+				await this.typeToOutput(`zain@portfolio:~$ ${command}\n`, 0);
+				
+				const commandRegistry = this.commands.getCommands();
+				
+				if (command === 'clear') {
+					this.clearTerminal();
+					return;
+				}
+
+				if (commandRegistry[command]) {
+					const result = await commandRegistry[command]();
+					if (result) {
+						await this.typeToOutput(result + '\n\n', 8);
+					}
+				} else {
+					await this.typeToOutput(`Command not found: ${command}\nType 'help' for available commands.\n\n`, 8);
+				}
+
+				this.scrollToBottom();
+			} catch (error) {
+				console.error('Error executing command:', error);
+				this.showError(`Error executing command: ${command}`);
+			}
+		}
+
+		private navigateHistory(direction: number): void {
+			if (this.state.commandHistory.length === 0) return;
+
+			this.state.historyIndex += direction;
+			
+			if (this.state.historyIndex < 0) {
+				this.state.historyIndex = 0;
+			} else if (this.state.historyIndex >= this.state.commandHistory.length) {
+				this.state.historyIndex = this.state.commandHistory.length;
+				this.input.value = '';
+				return;
+			}
+
+			this.input.value = this.state.commandHistory[this.state.historyIndex] || '';
+		}
+
+		private handleTabCompletion(): void {
+			try {
+				const currentInput = this.input.value;
+				const cursorPosition = this.input.selectionStart || 0;
+				const textBeforeCursor = currentInput.substring(0, cursorPosition);
+				const words = textBeforeCursor.split(' ').filter(word => word.length > 0);
+				const currentWord = words.length > 0 ? words[words.length - 1] : '';
+
+				const result = this.getCompletionSuggestions(words, currentWord);
+
+				if (result.suggestions.length === 1) {
+					this.completeInput(result.suggestions[0], currentWord, textBeforeCursor, currentInput, cursorPosition);
+				} else if (result.suggestions.length > 1) {
+					this.showCompletionSuggestions(result.suggestions);
+					
+					if (result.commonPrefix.length > currentWord.length) {
+						this.completeInput(result.commonPrefix, currentWord, textBeforeCursor, currentInput, cursorPosition);
+					}
+				} else if (result.suggestions.length === 0 && currentWord.length > 0) {
+					this.showNoCompletions();
+				}
+			} catch (error) {
+				console.error('Error in tab completion:', error);
+			}
+		}
+
+		private getCompletionSuggestions(words: string[], currentWord: string): TabCompletionResult {
+			let suggestions: string[] = [];
+
+			if (words.length === 0 || (words.length === 1 && !this.input.value.endsWith(' '))) {
+				suggestions = this.commands.getAvailableCommands().filter(cmd => 
+					cmd.startsWith(currentWord.toLowerCase())
+				);
+			} else {
+				const command = words[0].toLowerCase();
+				const commandFlags = this.commands.getCommandFlags();
+				
+				if (commandFlags[command]) {
+					if (currentWord.startsWith('-')) {
+						suggestions = commandFlags[command].filter(flag => 
+							flag.startsWith(currentWord)
+						);
+					} else {
+						if (['cat', 'tail'].includes(command)) {
+							suggestions = this.commands.getAvailableFiles().filter(file => 
+								file.startsWith(currentWord)
+							);
+						} else if (command === 'sudo' && words.length === 2) {
+							suggestions = ['make-coffee'].filter(subcmd => 
+								subcmd.startsWith(currentWord)
+							);
+						}
+					}
+				} else {
+					suggestions = this.commands.getAvailableFiles().filter(file => 
+						file.startsWith(currentWord)
+					);
+				}
+			}
+
+			const commonPrefix = this.findCommonPrefix(suggestions);
+			return { suggestions, commonPrefix };
+		}
+
+		private completeInput(completion: string, currentWord: string, textBeforeCursor: string, currentInput: string, cursorPosition: number): void {
+			const beforeWord = textBeforeCursor.substring(0, textBeforeCursor.lastIndexOf(currentWord));
+			const afterCursor = currentInput.substring(cursorPosition);
+			
+			this.input.value = beforeWord + completion + afterCursor;
+			const newPosition = beforeWord.length + completion.length;
+			this.input.setSelectionRange(newPosition, newPosition);
+		}
+
+		private async showCompletionSuggestions(suggestions: string[]): Promise<void> {
+			const suggestionText = `\n<span class="info">Possible completions:</span>\n${suggestions.map(s => `  <span class="success">${s}</span>`).join('\n')}\n`;
+			await this.typeToOutput(`zain@portfolio:~$ ${this.input.value}`, 0);
+			await this.typeToOutput(suggestionText, 0);
+		}
+
+		private showNoCompletions(): void {
+			this.input.style.borderBottom = '1px solid var(--error)';
+			setTimeout(() => {
+				this.input.style.borderBottom = 'none';
+			}, 200);
+		}
+
+		private findCommonPrefix(strings: string[]): string {
+			if (strings.length === 0) return '';
+			if (strings.length === 1) return strings[0];
+
+			let prefix = '';
+			const firstString = strings[0];
+			
+			for (let i = 0; i < firstString.length; i++) {
+				const char = firstString[i];
+				if (strings.every(str => str[i] === char)) {
+					prefix += char;
+				} else {
+					break;
+				}
+			}
+			
+			return prefix;
+		}
+
+		private async typeToOutput(text: string, speed = 8): Promise<void> {
+			const span = document.createElement('span');
+			this.output.appendChild(span);
+			
+			if (text.includes('<')) {
+				span.innerHTML = text;
+				this.scrollToBottom();
+			} else {
+				const tokens = this.tokenizeText(text);
+				for (const token of tokens) {
+					span.textContent += token;
+					this.scrollToBottom();
+					await this.sleep(speed);
+				}
+			}
+		}
+
+		private tokenizeText(text: string): string[] {
+			const tokens: string[] = [];
+			let currentToken = '';
+			
+			for (let i = 0; i < text.length; i++) {
+				const char = text[i];
+				
+				if (char === ' ' || char === '\n' || char === '\t') {
+					if (currentToken) {
+						tokens.push(currentToken);
+						currentToken = '';
+					}
+					tokens.push(char);
+				} else if (/[.,!?;:()[\]{}'"<>]/.test(char)) {
+					if (currentToken) {
+						tokens.push(currentToken);
+						currentToken = '';
+					}
+					tokens.push(char);
+				} else if (char === '█' || char === '░') {
+					if (currentToken) {
+						tokens.push(currentToken);
+						currentToken = '';
+					}
+					tokens.push(char);
+				} else {
+					currentToken += char;
+				}
+			}
+			
+			if (currentToken) {
+				tokens.push(currentToken);
+			}
+			
+			return tokens;
+		}
+
+		private sleep(ms: number): Promise<void> {
+			return new Promise(resolve => setTimeout(resolve, ms));
+		}
+
+		private scrollToBottom(): void {
+			const terminalBody = document.querySelector('.terminal-body') as HTMLElement;
+			if (terminalBody) {
+				terminalBody.scrollTop = terminalBody.scrollHeight;
+			}
+		}
+
+		private clearTerminal(): void {
+			this.output.innerHTML = '';
+		}
+
+		private showError(message: string): void {
+			const errorSpan = document.createElement('span');
+			errorSpan.className = 'error';
+			errorSpan.textContent = `Error: ${message}\n`;
+			this.output.appendChild(errorSpan);
+			this.scrollToBottom();
+		}
+	}
+
+	document.addEventListener('DOMContentLoaded', () => {
+		new TerminalInterface();
+	});
+</script>
