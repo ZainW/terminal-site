@@ -1,12 +1,13 @@
 # Agent Guidelines for terminal-portfoloio
 
 ## Build/Test Commands
-- `bun run dev` - Start development server
-- `bun run build` - Build for production  
-- `bun run preview` - Preview production build
-- `bunx playwright test` - Run Playwright tests (when configured)
-- `bunx playwright test --ui` - Run tests with UI mode
-- No linting configured - use built-in TypeScript checking with `astro check`
+
+- `bun run dev`: Start development server.
+- `bun run build`: Build for production.
+- `bun run preview`: Preview production build.
+- `bunx playwright test`: Run Playwright tests (when configured).
+- `bunx playwright test --ui`: Run tests with UI mode.
+- No linting configured: use built-in TypeScript checking with `astro check`.
 
 ## Project Structure
 - Astro v5 project with TypeScript (strict mode)

@@ -15,4 +15,7 @@
 	--error: #f7768e;
 	--border: #414868;
 	--shadow: rgba(26, 27, 38, 0.8);
+	--accent-color: #7aa2f7;
+	
+	accent-color: var(--accent-color, #7aa2f7);
 }
