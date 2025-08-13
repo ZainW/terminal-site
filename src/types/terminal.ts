@@ -1,11 +1,11 @@
 export interface Command {
 	name: string;
 	description: string;
-	execute: () => string | Promise<string>;
+	execute: () => CommandResult;
 }
 
 export interface CommandRegistry {
-	[key: string]: () => string | Promise<string>;
+	[key: string]: () => CommandResult;
 }
 
 export interface Skill {

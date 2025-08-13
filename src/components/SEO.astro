@@ -20,7 +20,9 @@ const {
 } = Astro.props;
 
 const fullImageUrl = image.startsWith('http') ? image : `${seoConfig.siteUrl}${image}`;
-const canonicalUrl = url === seoConfig.siteUrl ? url : `${seoConfig.siteUrl}${url}`;
+const canonicalUrl = url.startsWith('http://') || url.startsWith('https://') 
+	? url 
+	: `${seoConfig.siteUrl.endsWith('/') ? seoConfig.siteUrl.slice(0, -1) : seoConfig.siteUrl}${url.startsWith('/') ? url : '/' + url}`;
 ---
 
 <!-- Primary Meta Tags -->
@@ -64,7 +66,7 @@ const canonicalUrl = url === seoConfig.siteUrl ? url : `${seoConfig.siteUrl}${ur
 <script type="application/ld+json" set:html={JSON.stringify(structuredData)} />
 
 <!-- Preconnect to external domains -->
-<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
 <!-- DNS Prefetch for performance -->

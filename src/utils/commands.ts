@@ -108,7 +108,7 @@ into reality.
 	}
 
 	private listFiles(): string {
-		const date = new Date().toLocaleDateString();
+		const date = new Date().toISOString().slice(0, 10);
 		return `total 42
 drwxr-xr-x  8 zain zain  4096 ${date} .
 drwxr-xr-x  3 root root  4096 ${date} ..
@@ -237,11 +237,12 @@ Use 'skills --verbose' for detailed proficiency levels.`;
 
 		for (const skill of skills) {
 			const barLength = 30;
-			const filled = Math.round((skill.level / 100) * barLength);
+			const sanitizedLevel = Math.floor(Math.max(0, Math.min(100, Number.isFinite(skill.level) ? skill.level : 0)));
+			const filled = Math.round((sanitizedLevel / 100) * barLength);
 			const empty = barLength - filled;
 			const bar = '█'.repeat(filled) + '░'.repeat(empty);
 			
-			output += `${skill.name.padEnd(12)} [${bar}] ${skill.level}%\n`;
+			output += `${skill.name.padEnd(12)} [${bar}] ${sanitizedLevel}%\n`;
 		}
 
 		output += '\nLegend: █ = Proficient, ░ = Learning\n';

@@ -19,7 +19,7 @@ const { initiallyHidden = true } = Astro.props;
 		<div id="terminal-output"></div>
 		<div class="input-line">
 			<span class="prompt">zain@portfolio:~$ </span>
-			<input type="text" id="terminal-input" autocomplete="off" spellcheck="false">
+			<input type="text" id="terminal-input" autocomplete="off" spellcheck="false" aria-label="Terminal command input">
 			<span class="cursor">_</span>
 		</div>
 	</div>
@@ -428,7 +428,7 @@ Type <span class="info">'help'</span> to see available commands or just start ex
 		private async showCompletionSuggestions(suggestions: string[]): Promise<void> {
 			const suggestionText = `\n<span class="info">Possible completions:</span>\n${suggestions.map(s => `  <span class="success">${s}</span>`).join('\n')}\n`;
 			await this.typeToOutput(`zain@portfolio:~$ ${this.input.value}`, 0);
-			await this.typeToOutput(suggestionText, 0);
+			await this.typeToOutputHTML(suggestionText, 0);
 		}
 
 		private showNoCompletions(): void {
@@ -461,17 +461,19 @@ Type <span class="info">'help'</span> to see available commands or just start ex
 			const span = document.createElement('span');
 			this.output.appendChild(span);
 			
-			if (text.includes('<')) {
-				span.innerHTML = text;
+			const tokens = this.tokenizeText(text);
+			for (const token of tokens) {
+				span.textContent += token;
 				this.scrollToBottom();
-			} else {
-				const tokens = this.tokenizeText(text);
-				for (const token of tokens) {
-					span.textContent += token;
-					this.scrollToBottom();
-					await this.sleep(speed);
-				}
+				await this.sleep(speed);
 			}
+		}
+
+		private async typeToOutputHTML(html: string, speed = 8): Promise<void> {
+			const span = document.createElement('span');
+			this.output.appendChild(span);
+			span.innerHTML = html;
+			this.scrollToBottom();
 		}
 
 		private tokenizeText(text: string): string[] {

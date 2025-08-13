@@ -165,14 +165,31 @@ export interface Props {
 		}
 
 		async transitionToTerminal(): Promise<void> {
-			this.bootScreen.style.opacity = '0';
 			this.bootScreen.style.transition = 'opacity 1s ease-out';
 			
-			setTimeout(() => {
+			const handleTransitionEnd = () => {
 				this.bootScreen.style.display = 'none';
 				const event = new CustomEvent('bootComplete');
 				document.dispatchEvent(event);
-			}, 1000);
+				this.bootScreen.removeEventListener('transitionend', handleTransitionEnd);
+			};
+			
+			this.bootScreen.addEventListener('transitionend', handleTransitionEnd);
+			
+			// Fallback timeout to ensure hiding if transitionend doesn't fire
+			const fallbackTimeout = setTimeout(() => {
+				this.bootScreen.removeEventListener('transitionend', handleTransitionEnd);
+				this.bootScreen.style.display = 'none';
+				const event = new CustomEvent('bootComplete');
+				document.dispatchEvent(event);
+			}, 1100);
+			
+			// Clear fallback if transition completes normally
+			this.bootScreen.addEventListener('transitionend', () => {
+				clearTimeout(fallbackTimeout);
+			}, { once: true });
+			
+			this.bootScreen.style.opacity = '0';
 		}
 
 		private async typeText(text: string, speed = 15): Promise<void> {

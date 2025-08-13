@@ -49,3 +49,11 @@
 	margin: 12px 0;
 	color: var(--fg-primary);
 }
+
+/* Reduce motion for progress animations */
+@media (prefers-reduced-motion: reduce) {
+	.skill-fill,
+	.progress-fill {
+		transition: none;
+	}
+}
