@@ -232,7 +232,7 @@ const { initiallyHidden = true } = Astro.props;
 			this.rateLimiter = {
 				commands: 0,
 				lastReset: Date.now(),
-				maxCommands: 30,
+				maxCommands: 60,
 				resetInterval: 60000 // 1 minute
 			};
 
@@ -323,7 +323,8 @@ Type <span class="info">'help'</span> to see available commands or just start ex
 			}
 			
 			if (this.rateLimiter.commands >= this.rateLimiter.maxCommands) {
-				this.showError('Rate limit exceeded. Please wait before executing more commands.');
+				const timeLeft = Math.ceil((this.rateLimiter.resetInterval - (Date.now() - this.rateLimiter.lastReset)) / 1000);
+				this.showError('Rate limit exceeded. Please wait ' + timeLeft + ' seconds before executing more commands.');
 				return false;
 			}
 			

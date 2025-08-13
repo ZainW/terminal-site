@@ -1,5 +1,5 @@
 // Service Worker for Terminal Portfolio - Security Hardened
-const CACHE_NAME = 'terminal-portfolio-v1';
+const CACHE_NAME = 'terminal-portfolio-v2';
 const ALLOWED_ORIGINS = [
 	self.location.origin,
 	'https://fonts.googleapis.com',
@@ -71,14 +71,8 @@ self.addEventListener('fetch', (event) => {
 	event.respondWith(
 		caches.match(event.request)
 			.then((cachedResponse) => {
-				if (cachedResponse) {
-					return cachedResponse;
-				}
-				
-				// Clone request for network fetch
-				const fetchRequest = event.request.clone();
-				
-				return fetch(fetchRequest)
+				// Return cached version or fetch from network
+				return cachedResponse || fetch(event.request)
 					.then((response) => {
 						// Check if valid response
 						if (!response || response.status !== 200 || response.type !== 'basic') {
