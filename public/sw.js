@@ -15,25 +15,30 @@ const urlsToCache = [
 
 // Security helper function
 function isAllowedRequest(request) {
-	const url = new URL(request.url);
-	
-	// Only cache GET requests
-	if (request.method !== 'GET') {
+	try {
+		const url = new URL(request.url);
+		
+		// Only cache GET requests
+		if (request.method !== 'GET') {
+			return false;
+		}
+		
+		// Check if origin is in allowed list
+		if (!ALLOWED_ORIGINS.includes(url.origin)) {
+			return false;
+		}
+		
+		// Block potentially dangerous file extensions (removed .js for Astro compatibility)
+		const dangerousExtensions = ['.exe', '.bat', '.cmd', '.scr', '.vbs', '.php'];
+		if (dangerousExtensions.some(ext => url.pathname.endsWith(ext))) {
+			return false;
+		}
+		
+		return true;
+	} catch (error) {
+		console.error('SW: Invalid URL in request:', error);
 		return false;
 	}
-	
-	// Check if origin is in allowed list
-	if (!ALLOWED_ORIGINS.includes(url.origin)) {
-		return false;
-	}
-	
-	// Block potentially dangerous file extensions
-	const dangerousExtensions = ['.exe', '.bat', '.cmd', '.scr', '.vbs', '.js'];
-	if (dangerousExtensions.some(ext => url.pathname.endsWith(ext))) {
-		return false;
-	}
-	
-	return true;
 }
 
 // Install event - cache resources securely
@@ -123,8 +128,9 @@ self.addEventListener('activate', (event) => {
 
 // Handle service worker messages securely
 self.addEventListener('message', (event) => {
-	// Validate message origin
-	if (event.origin !== self.location.origin) {
+	// Validate message origin for cross-origin messages
+	// Note: event.origin is empty string for same-origin client messages
+	if (event.origin && event.origin !== self.location.origin) {
 		return;
 	}
 	
