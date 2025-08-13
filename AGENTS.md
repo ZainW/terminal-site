@@ -1,18 +1,20 @@
 # Agent Guidelines for terminal-portfoloio
 
 ## Build/Test Commands
-- `npm run dev` - Start development server
-- `npm run build` - Build for production  
-- `npm run preview` - Preview production build
-- No test framework configured - add tests if needed
-- No linting configured - use built-in TypeScript checking
+- `bun run dev` - Start development server
+- `bun run build` - Build for production  
+- `bun run preview` - Preview production build
+- `bunx playwright test` - Run Playwright tests (when configured)
+- `bunx playwright test --ui` - Run tests with UI mode
+- No linting configured - use built-in TypeScript checking with `astro check`
 
 ## Project Structure
 - Astro v5 project with TypeScript (strict mode)
-- Single-page portfolio with terminal interface
-- Pages in `src/pages/` (currently only index.astro)
-- Static assets in `public/` (favicon.png)
-- All code in single index.astro file (HTML, CSS, JS)
+- Single-page portfolio with interactive terminal interface
+- Components in `src/components/` (BootSequence, Terminal, SEO, Performance)
+- Pages in `src/pages/` (index.astro, sitemap.xml.ts)
+- Utils in `src/utils/` (commands.ts for terminal functionality)
+- Styles in `src/styles/` (modular CSS files)
 
 ## Code Style & Formatting
 - Use tabs for indentation (consistent with existing code)
@@ -24,9 +26,10 @@
 
 ## TypeScript & Imports
 - Uses strict TypeScript config (`astro/tsconfigs/strict`)
-- ES module syntax for imports
-- Type annotations where beneficial
-- No external dependencies beyond Astro core
+- ES module syntax for imports (import/export)
+- Define interfaces in `src/types/` (e.g., terminal.ts)
+- Type annotations for props and complex functions
+- Playwright available for e2e testing
 
 ## Terminal Portfolio Specifics
 - Maintain retro terminal aesthetic with green-on-black theme
