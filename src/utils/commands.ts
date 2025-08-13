@@ -58,33 +58,33 @@ export class TerminalCommands {
 	}
 
 	private showHelp(): string {
-		return `<strong>Available commands:</strong>
+		return `Available commands:
 
-<em>Basic Commands:</em>
-  <span class="info">help</span>              Show this help message
-  <span class="info">whoami</span>            Display information about me
-  <span class="info">ls</span>                List available files and directories
-  <span class="info">clear</span>             Clear the terminal screen
-  <span class="info">pwd</span>               Show current directory
-  <span class="info">date</span>              Show current date and time
-  <span class="info">uname</span>             Show system information
+Basic Commands:
+  help              Show this help message
+  whoami            Display information about me
+  ls                List available files and directories
+  clear             Clear the terminal screen
+  pwd               Show current directory
+  date              Show current date and time
+  uname             Show system information
 
-<em>Portfolio Commands:</em>
-  <span class="success">cat about.txt</span>     Read detailed information about me
-  <span class="success">./projects.sh</span>     Launch interactive project browser
-  <span class="success">skills --list</span>     Show my technical skills
-  <span class="success">skills --verbose</span>  Show detailed skill levels with progress bars
-  <span class="success">tail experience.log</span>  Show my work experience
-  <span class="success">contact</span>           Display contact information
+Portfolio Commands:
+  cat about.txt     Read detailed information about me
+  ./projects.sh     Launch interactive project browser
+  skills --list     Show my technical skills
+  skills --verbose  Show detailed skill levels with progress bars
+  tail experience.log  Show my work experience
+  contact           Display contact information
 
-<em>Easter Eggs:</em>
-  <span class="ascii-art">sudo make-coffee</span>  Brew some virtual coffee
-  <span class="ascii-art">rm -rf /boredom</span>   Remove all boredom from the system
-  <span class="ascii-art">ls -la /secrets</span>   List hidden secrets (if you dare)
+Easter Eggs:
+  sudo make-coffee  Brew some virtual coffee
+  rm -rf /boredom   Remove all boredom from the system
+  ls -la /secrets   List hidden secrets (if you dare)
 
-<span class="info">💡 Pro tips:</span> 
+💡 Pro tips: 
   • Use arrow keys to navigate command history
-  • Press <span class="success">Tab</span> for command and file completion
+  • Press Tab for command and file completion
   • Try typing partial commands and press Tab to see suggestions`;
 	}
 
