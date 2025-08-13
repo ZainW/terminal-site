@@ -208,6 +208,12 @@ const { initiallyHidden = true } = Astro.props;
 		private terminalScreen: HTMLElement;
 		private commands: TerminalCommands;
 		private state: TerminalState;
+		private rateLimiter: {
+			commands: number;
+			lastReset: number;
+			maxCommands: number;
+			resetInterval: number;
+		};
 
 		constructor() {
 			this.output = document.getElementById('terminal-output')!;
@@ -221,6 +227,13 @@ const { initiallyHidden = true } = Astro.props;
 				currentDirectory: '~',
 				bootComplete: false,
 				bootSkipped: false
+			};
+
+			this.rateLimiter = {
+				commands: 0,
+				lastReset: Date.now(),
+				maxCommands: 30,
+				resetInterval: 60000 // 1 minute
 			};
 
 			this.init();
@@ -302,9 +315,29 @@ Type <span class="info">'help'</span> to see available commands or just start ex
 			await this.typeToOutputHTML(welcome, 8);
 		}
 
+		private checkRateLimit(): boolean {
+			const now = Date.now();
+			if (now - this.rateLimiter.lastReset > this.rateLimiter.resetInterval) {
+				this.rateLimiter.commands = 0;
+				this.rateLimiter.lastReset = now;
+			}
+			
+			if (this.rateLimiter.commands >= this.rateLimiter.maxCommands) {
+				this.showError('Rate limit exceeded. Please wait before executing more commands.');
+				return false;
+			}
+			
+			this.rateLimiter.commands++;
+			return true;
+		}
+
 		private async executeCommand(): Promise<void> {
 			const command = this.input.value.trim();
 			if (!command) return;
+
+			if (!this.checkRateLimit()) {
+				return;
+			}
 
 			try {
 				this.state.commandHistory.push(command);
@@ -426,8 +459,10 @@ Type <span class="info">'help'</span> to see available commands or just start ex
 		}
 
 		private async showCompletionSuggestions(suggestions: string[]): Promise<void> {
-			const suggestionText = `\n<span class="info">Possible completions:</span>\n${suggestions.map(s => `  <span class="success">${s}</span>`).join('\n')}\n`;
-			await this.typeToOutput(`zain@portfolio:~$ ${this.input.value}`, 0);
+			const sanitizedInput = this.sanitizeInput(this.input.value);
+			const sanitizedSuggestions = suggestions.map(s => this.sanitizeInput(s));
+			const suggestionText = `\n<span class="info">Possible completions:</span>\n${sanitizedSuggestions.map(s => `  <span class="success">${s}</span>`).join('\n')}\n`;
+			await this.typeToOutput(`zain@portfolio:~$ ${sanitizedInput}`, 0);
 			await this.typeToOutputHTML(suggestionText, 0);
 		}
 
@@ -457,6 +492,49 @@ Type <span class="info">'help'</span> to see available commands or just start ex
 			return prefix;
 		}
 
+		private sanitizeInput(input: string): string {
+			const div = document.createElement('div');
+			div.textContent = input;
+			return div.innerHTML;
+		}
+
+		private createSafeHTMLElement(html: string): DocumentFragment {
+			const template = document.createElement('template');
+			template.innerHTML = html.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+			
+			const allowedTags = ['span', 'strong', 'em'];
+			const allowedClasses = ['info', 'success', 'error', 'ascii-art'];
+			
+			const walker = document.createTreeWalker(
+				template.content,
+				NodeFilter.SHOW_ELEMENT,
+				{
+					acceptNode: (node) => {
+						const element = node as Element;
+						if (allowedTags.includes(element.tagName.toLowerCase())) {
+							const className = element.className;
+							if (!className || allowedClasses.includes(className)) {
+								return NodeFilter.FILTER_ACCEPT;
+							}
+						}
+						return NodeFilter.FILTER_REJECT;
+					}
+				}
+			);
+
+			const fragment = document.createDocumentFragment();
+			const safeNodes: Node[] = [];
+			
+			let currentNode = walker.nextNode();
+			while (currentNode) {
+				safeNodes.push(currentNode.cloneNode(true));
+				currentNode = walker.nextNode();
+			}
+			
+			safeNodes.forEach(node => fragment.appendChild(node));
+			return fragment;
+		}
+
 		private async typeToOutput(text: string, speed = 8): Promise<void> {
 			const span = document.createElement('span');
 			this.output.appendChild(span);
@@ -472,7 +550,41 @@ Type <span class="info">'help'</span> to see available commands or just start ex
 		private async typeToOutputHTML(html: string, speed = 8): Promise<void> {
 			const span = document.createElement('span');
 			this.output.appendChild(span);
-			span.innerHTML = html;
+			
+			// Parse HTML safely with only allowed tags and classes
+			const allowedTags = ['span', 'strong', 'em'];
+			const allowedClasses = ['info', 'success', 'error', 'ascii-art'];
+			
+			// Create a safe version by parsing and filtering
+			const tempDiv = document.createElement('div');
+			tempDiv.innerHTML = html;
+			
+			// Walk through all elements and sanitize
+			const elements = tempDiv.querySelectorAll('*');
+			elements.forEach(element => {
+				const tagName = element.tagName.toLowerCase();
+				if (!allowedTags.includes(tagName)) {
+					// Replace disallowed tags with span
+					const replacement = document.createElement('span');
+					replacement.textContent = element.textContent || '';
+					element.parentNode?.replaceChild(replacement, element);
+				} else {
+					// Check class names
+					const className = element.className;
+					if (className && !allowedClasses.includes(className)) {
+						element.removeAttribute('class');
+					}
+					// Remove all other attributes except class
+					const attributes = Array.from(element.attributes);
+					attributes.forEach(attr => {
+						if (attr.name !== 'class') {
+							element.removeAttribute(attr.name);
+						}
+					});
+				}
+			});
+			
+			span.innerHTML = tempDiv.innerHTML;
 			this.scrollToBottom();
 		}
 
